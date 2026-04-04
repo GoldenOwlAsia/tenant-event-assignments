@@ -40,7 +40,7 @@ Services: `postgres`, `redis`, `api`, `worker`.
 ### 3. Migrations (first time or empty DB)
 
 ```bash
-docker compose run --rm api pnpm exec mikro-orm migration:up
+pnpm migration:up
 ```
 
 ### 4. See failure + retries + logs
@@ -84,6 +84,15 @@ docker compose down
 ```
 
 Remove DB data: `docker compose down -v`.
+
+---
+
+## Run unit test
+
+```bash
+pnpm test
+```
+![Test result](/Test-result.png)
 
 ---
 
