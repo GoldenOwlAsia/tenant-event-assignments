@@ -7,7 +7,7 @@ import { QueryBus } from '@nestjs/cqrs';
 import { ValidateJwtUserQuery } from '../query/validate-jwt-user.query';
 import { TokenPayloadDto } from '../dto/token-payload.dto';
 import { User } from '../entity/user.entity';
-import { Role } from '@/common/enum/role.enum';
+import { Role } from '@/modules/auth/enum/role.enum';
 
 export interface IJwtStrategy {
   id: string;

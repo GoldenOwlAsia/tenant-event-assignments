@@ -25,8 +25,7 @@
     "migration:up": "mikro-orm migration:up",
     "migration:down": "mikro-orm migration:down",
     "migration:list": "mikro-orm migration:list",
-    "worker": "tsx src/modules/worker/worker.ts",
-    "mail-worker": "tsx src/modules/mail-worker/mail-worker.ts"
+    "worker": "tsx src/worker.ts"
   },
   "dependencies": {
     "@mikro-orm/migrations": "^6.6.12",

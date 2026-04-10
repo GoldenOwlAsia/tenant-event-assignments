@@ -1,14 +1,14 @@
 import { EntityManager } from '@mikro-orm/postgresql';
 import { Seeder } from '@mikro-orm/seeder';
-import { Role } from '@/common/enum/role.enum';
-import { TaskStatus } from '@/common/enum/status.enum';
+import { Role } from '@/modules/auth/enum/role.enum';
+import { TaskStatus } from '@/modules/task/enum/task-status.enum';
 import { User } from '@/modules/auth/entity/user.entity';
-import { Task } from '@/modules/task-management/entity/task.entity';
+import { Task } from '@/modules/task/entity/task.entity';
 
 const SEED_TASK_TITLES = [
-  'Seed: Project kickoff',
-  'Seed: API documentation',
-  'Seed: QA sign-off',
+  'Project kickoff',
+  'API documentation',
+  'QA sign-off',
 ] as const;
 
 export class DatabaseSeeder extends Seeder {

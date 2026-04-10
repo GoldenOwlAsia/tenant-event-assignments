@@ -1,6 +1,6 @@
 import { Entity, Property } from '@mikro-orm/core';
 
-import { EventStatus } from '@/common/enum/status.enum';
+import { EventStatus } from '@/modules/event/enum/event.enum';
 import { Base } from '@/common/entity';
 import { PayLoadData } from '../dto';
 import { EventRepository } from '../repository/event.repository';

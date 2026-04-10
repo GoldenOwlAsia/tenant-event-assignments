@@ -9,9 +9,11 @@ import { Queue } from 'bullmq';
 import { Event } from './entities/event.entity';
 import { EventFailureLog } from './entities/event-failure-log.entity';
 import { EventFailureLogRepository } from './repository/event-failure-log.repository';
-import { EventStatus } from '@/common/enum/status.enum';
-import { QUEUE_CONFIG } from '@/common/constant/event.constant';
-import { EventType } from '@/common/enum/event.enum';
+import { EventStatus } from '@/modules/event/enum/event.enum';
+import { QUEUE_CONFIG } from '@/modules/event/event.constant';
+import { EventType } from '@/modules/event/enum/event.enum';
+import { TASK_PROCESSING_QUEUE } from '@/modules/task/task.queue';
+import { MAIL_PROCESSING_QUEUE } from '@/modules/mail/mail.queue';
 
 @Injectable()
 export class EventService {
@@ -21,8 +23,8 @@ export class EventService {
     @InjectRepository(Event)
     private readonly eventRepository: EventRepository,
     private readonly em: EntityManager,
-    @InjectQueue('task-processing-queue') private processEventQueue: Queue,
-    @InjectQueue('mail-processing-queue') private mailProcessingQueue: Queue,
+    @InjectQueue(TASK_PROCESSING_QUEUE) private processEventQueue: Queue,
+    @InjectQueue(MAIL_PROCESSING_QUEUE) private mailProcessingQueue: Queue,
     @InjectRepository(EventFailureLog)
     private readonly eventFailureLogRepository: EventFailureLogRepository,
   ) {}

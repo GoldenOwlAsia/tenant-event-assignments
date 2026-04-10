@@ -7,15 +7,15 @@ import { GetMyInfoQuery } from './query/get-my-info.query';
 import { FindAllUsersPaginatedQuery } from './query/find-all-users-paginated.query';
 import { AuthGuard } from '@nestjs/passport';
 import { ILocalStrategy } from './strategies/local.strategy';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UserDto } from './dto/user.dto';
-import { LogInResponseDto } from './dto/log-in.dto';
+import { LogInBodyRequestDto, LogInResponseDto } from './dto/log-in.dto';
 import { IJwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard, LocalAuthGuard, RolesGuard } from './guard';
-import { ReqUser } from '@/decorator/api.decorator';
-import { PaginationQueryDto, PaginationResponseDto } from '@/common/pagination';
-import { Roles } from '@/decorator/roles.decorator';
-import { Role } from '@/common/enum/role.enum';
+import { ReqUser } from '@/common/decorator/api.decorator';
+import { PaginationQueryDto, PaginationResponseDto } from '@/common/dto/pagination.dto';
+import { Roles } from '@/common/decorator/roles.decorator';
+import { Role } from '@/modules/auth/enum/role.enum';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -26,6 +26,7 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @ApiBody({ type: LogInBodyRequestDto })
   @UseGuards(LocalAuthGuard)
   logIn(@ReqUser() user: ILocalStrategy): Promise<LogInResponseDto> {
     return this.commandBus.execute(new LoginCommand(user));
@@ -47,7 +48,6 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles([Role.REPORTER])
-  @ApiQuery({ type: PaginationQueryDto })
   findAllUsers(
     @Query() query: PaginationQueryDto,
   ): Promise<PaginationResponseDto<UserDto>> {

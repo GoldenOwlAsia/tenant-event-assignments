@@ -1,4 +1,4 @@
-# Single image: run API (default), task worker, or mail worker via docker-compose `command`.
+# Single image: run API (default) or unified Bull worker via docker-compose `command`.
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./

@@ -1,4 +1,4 @@
-import { Role } from '@/common/enum/role.enum';
+import { Role } from '@/modules/auth/enum/role.enum';
 
 export class TokenPayloadDto {
   sub: string;

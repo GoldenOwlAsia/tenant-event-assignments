@@ -7,8 +7,10 @@ import { EventService } from './event.service';
 import { Event } from './entities/event.entity';
 import { EventFailureLog } from './entities/event-failure-log.entity';
 import { CreateEventDto } from './dto/create-event.dto';
-import { EventType } from '@/common/enum/event.enum';
+import { EventType } from '@/modules/event/enum/event.enum';
 import { PayLoadData, SendMailData } from './dto';
+import { TASK_PROCESSING_QUEUE } from '@/modules/task/task.queue';
+import { MAIL_PROCESSING_QUEUE } from '@/modules/mail/mail.queue';
 describe('EventService', () => {
   let service: EventService;
 
@@ -59,11 +61,11 @@ describe('EventService', () => {
           useValue: mockEm,
         },
         {
-          provide: getQueueToken('task-processing-queue'),
+          provide: getQueueToken(TASK_PROCESSING_QUEUE),
           useValue: mockQueueTask,
         },
         {
-          provide: getQueueToken('mail-processing-queue'),
+          provide: getQueueToken(MAIL_PROCESSING_QUEUE),
           useValue: mockQueueMail,
         },
         {

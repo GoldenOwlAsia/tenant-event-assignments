@@ -1,10 +1,10 @@
 import { Base } from '@/common/entity/base.entity';
 import { Exclude } from 'class-transformer';
 import { BeforeCreate, Entity, Property } from '@mikro-orm/core';
-import { Role } from '@/common/enum/role.enum';
+import { Role } from '@/modules/auth/enum/role.enum';
 
-import { generateWithBcrypt } from '@/common/utils/hash.helper';
-import { AUTH_SALT_ROUNDS } from '@/common/constant/auth.constant';
+import { generateWithBcrypt } from '@/common/utils/hash.util';
+import { AUTH_SALT_ROUNDS } from '@/modules/auth/auth.constant';
 import { UserDto } from '../dto/user.dto';
 
 @Entity({ tableName: 'user' })

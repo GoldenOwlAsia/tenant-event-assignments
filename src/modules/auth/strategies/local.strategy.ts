@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { ValidateUserQuery } from '../query/validate-user.query';
-import { Role } from '@/common/enum/role.enum';
+import { Role } from '@/modules/auth/enum/role.enum';
 
 export interface ILocalStrategy {
   id: string;

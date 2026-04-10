@@ -1,4 +1,4 @@
-import { CreateTaskBodyRequestDto } from '@/modules/task-management/dto/create-task.dto';
+import { CreateTaskBodyRequestDto } from '@/modules/task/dto/create-task.dto';
 
 export interface PayLoadData extends CreateTaskBodyRequestDto {
   taskId: string;

@@ -3,7 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { User } from '../entity/user.entity';
 import { EntityRepository } from '@mikro-orm/postgresql';
 import { UnauthorizedException } from '@nestjs/common';
-import { compareWithBcrypt } from '@/common/utils/hash.helper';
+import { compareWithBcrypt } from '@/common/utils/hash.util';
 
 export class ValidateUserQuery {
   constructor(

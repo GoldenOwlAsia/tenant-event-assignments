@@ -5,7 +5,7 @@ import { defineConfig } from '@mikro-orm/postgresql';
 import { Event } from '@/modules/event/entities/event.entity';
 import { EventFailureLog } from '@/modules/event/entities/event-failure-log.entity';
 import { User } from '@/modules/auth/entity/user.entity';
-import { Task } from '@/modules/task-management/entity/task.entity';
+import { Task } from '@/modules/task/entity/task.entity';
 import { DatabaseSeeder } from '@/database/seeders/database.seeder';
 
 
