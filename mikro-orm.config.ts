@@ -4,6 +4,9 @@ import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { defineConfig } from '@mikro-orm/postgresql';
 import { Event } from '@/modules/event/entities/event.entity';
 import { EventFailureLog } from '@/modules/event/entities/event-failure-log.entity';
+import { User } from '@/modules/auth/entity/user.entity';
+import { Task } from '@/modules/task-management/entity/task.entity';
+import { DatabaseSeeder } from '@/database/seeders/database.seeder';
 
 
 export default defineConfig({
@@ -13,7 +16,7 @@ export default defineConfig({
   user: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   driver: PostgreSqlDriver,
-  entities: [Event, EventFailureLog],
+  entities: [Event, EventFailureLog, User, Task],
   debug: false,
 
   migrations: {
@@ -21,6 +24,7 @@ export default defineConfig({
   },
   seeder: {
     path: './src/database/seeders',
+    defaultSeeder: DatabaseSeeder.name,
   },
   pool: {
     min: 0,

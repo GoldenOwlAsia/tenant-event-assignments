@@ -1,15 +1,13 @@
 # Async event flow (demo)
 
-Small NestJS service that matches `requirement.txt`: HTTP creates an event, saves it in Postgres, enqueues work on **BullMQ** (Redis), and a **worker** processes jobs with retries and failure logs.
+This project is a **demo** of a **task-management SaaS**: users and reporters manage tasks through a defined state machine, while the API stays thin by pushing heavy work to **background jobs**.
 
-| Requirement | What this repo does |
-|---------------|---------------------|
-| POST to receive an event | `POST /api/event` (global prefix `/api`) |
-| Store `tenantId`, `payload`, status | MikroORM entities; status moves `pending` → `processing` → `completed` or `failed` |
-| Queue | BullMQ + Redis |
-| Worker: process, simulate fail/success, 3 attempts + backoff, dead-letter style | `payload.simulateFailure`; after 3 failures the event is `failed` and logs are stored (see below) |
-| Log attempts / failures / retries | Rows in `event_failure_logs` + worker stdout |
-| Clear modules, `tenantId` through the stack | `src/modules/event/*`, `src/modules/worker/worker.ts`; `tenantId` is in the body, DB row, job payload, and failure logs |
+**Asynchronous processing** uses **Redis** and **BullMQ**. Two workers run in parallel:
+
+- **Task worker** — subscribes to `task-processing-queue`. It creates new tasks in the database from queued events, updates event status (`processing` → `completed` or `failed`), and hands off notification work to the mail queue. Failed jobs are retried with backoff; repeated failures are logged and can trigger a failure email.
+- **Mail worker** — subscribes to `mail-processing-queue` and sends email (e.g. “task created” or “task creation failed”). With Docker Compose, **MailHog** receives mail so you can verify the flow without a real SMTP provider.
+
+Together, this illustrates a typical pattern: **event → task creation → outbound mail**, all **off the HTTP request path**, with retries and observability suitable for a reviewer walkthrough.
 
 ## Architecture
 
@@ -35,7 +33,7 @@ Defaults: API on host **3005** (`API_PUBLISH_PORT`), Postgres **5433**. If you c
 docker compose up -d --build
 ```
 
-Services: `postgres`, `redis`, `api`, `worker`.
+Services: `postgres`, `redis`, `mailhog`, `api`, `worker`, `mailworker`.
 
 ### 3. Migrations (first time or empty DB)
 
@@ -43,23 +41,84 @@ Services: `postgres`, `redis`, `api`, `worker`.
 pnpm migration:up
 ```
 
-### 4. See failure + retries + logs
-
-Use a **new** `tenantId` each time you repeat (DB has one row per `tenantId`).
-
-```bash
-curl -sS -X POST "http://127.0.0.1:3005/api/event" \
-  -H "Content-Type: application/json" \
-  -d '{"tenantId":"review-fail-1","payload":{"simulateFailure":true}}'
-```
-
-Wait ~5 seconds (backoff between tries), then:
+### 4. Seed (Optional, Recommend)
+Loads default users and sample tasks for local development. Run **after** migrations. Safe to run more than once: existing users are skipped, and tasks are only inserted if the first seed task title is not already present.
 
 ```bash
-curl -sS "http://127.0.0.1:3005/api/event/review-fail-1/failure-logs"
+pnpm seed
 ```
 
-You should see **three** entries (`attempt` 1–3). Check the worker:
+If the API is running in Docker (the image uses `npm`):
+
+```bash
+docker compose exec api npm run seed
+```
+
+**Users** (passwords are for local use only):
+
+| Email | Password | Role |
+|-------|----------|------|
+| `user@assignment.local` | `User123!@#` | `USER` |
+| `reporter@assignment.local` | `Reporter123!@#` | `REPORTER` |
+
+Or you can register you own account
+
+```bash
+curl --location 'http://localhost:3005/api/auth/register' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": Goldenowl@gmail.com",
+    "password": "GoldenOwl@Pass21",
+    "role": "reporter",
+    "name": "Your name"
+}
+```
+
+### Task Management State machine
+
+Transitions and allowed roles are defined in [`src/modules/task-management/state-machine/task.state-machine.ts`](src/modules/task-management/state-machine/task.state-machine.ts).
+
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> ASSIGNED: ASSIGN (REPORTER)
+    ASSIGNED --> IN_PROGRESS: START (USER)
+    ASSIGNED --> CREATED: UNASSIGN (REPORTER)
+    IN_PROGRESS --> PENDING_REVIEW: REQUEST_REVIEW
+    PENDING_REVIEW --> COMPLETED: APPROVE
+    COMPLETED --> [*]
+```
+
+### 5. Create + Action with task (Login and Provide you own JWT token)
+
+```bash
+curl --location 'http://localhost:3005/api/task' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: ••••••' \
+--data '{
+    "title": "Demo task",
+    "description": "Test description",
+    "dueDate": "2026-04-09T14:30:00.000Z"
+}'
+```
+
+### 6. See failure + retries + logs
+
+The create-task response (step 5) does **not** include `taskId`; it is only logged server-side. Get the UUID from either place:
+
+- **API logs** — after the `POST /api/task` request, run `docker logs assignment-api` (or `docker compose logs api`) and find a line like `Push to queue: … for taskId: <uuid>`.
+- **Task worker logs** — `docker logs assignment-worker` and find `Processing job: taskId: <uuid>`.
+
+Replace `YOUR_TASK_ID` and use the same JWT as in step 5:
+
+```bash
+curl -sS "http://127.0.0.1:3005/api/event/YOUR_TASK_ID/failure-logs" \
+  -H "Authorization: Bearer YOUR_JWT"
+```
+
+You will see **three** rows (`attempt` 1–3) only if the **task-processing** job failed on every retry (BullMQ is configured for 3 attempts). If the task was created successfully, this endpoint returns an empty list.
+
+Check the worker:
 
 ```bash
 docker logs assignment-worker
@@ -67,17 +126,21 @@ docker logs assignment-worker
 
 Look for `Failed job` lines and `Moved to DLQ` on the last attempt.
 
-### 5. See success path
+### 7. See success path
 
-```bash
-curl -sS -X POST "http://127.0.0.1:3005/api/event" \
-  -H "Content-Type: application/json" \
-  -d '{"tenantId":"review-ok-1","payload":{"simulateFailure":false}}'
-```
+After a successful **create task** (step 5), confirm the happy path:
 
-Worker log should show `Success Job`. Event ends as `completed` in the DB.
+- **Task worker** (`docker logs assignment-worker`): you should see `Processing job: taskId: …` without repeated `Failed job` lines for that run.
+- **Mail worker** (`docker logs assignment-mailworker`): look for `[mail] success taskId=…` when the notification email is sent.
+- The related `Event` row in the database ends as `completed` when processing finishes.
 
-### 6. Stop
+### 8. Check received mail (MailHog)
+
+Open **http://localhost:8025** in your browser to view notification mail send by MailHog (task notifications, failure emails, etc.).
+![Mailhog](/assest/mailhog.png)
+
+
+### 9. Stop
 
 ```bash
 docker compose down
@@ -92,13 +155,20 @@ Remove DB data: `docker compose down -v`.
 ```bash
 pnpm test
 ```
-![Test result](/Test-result.png)
+![Test result](/assest/test-result.png)
 
 ---
 
 ## Code map (for review)
 
-- `src/modules/event/` — HTTP, DTOs, service, queue publish, entities  
-- `src/modules/worker/worker.ts` — BullMQ consumer (runs in the `worker` Compose service)  
-- `requirement.txt` — original brief  
-- `docker-compose.yml` — full stack  
+- `src/main.ts`, `src/app.module.ts` — Nest bootstrap, BullMQ wiring, feature modules  
+- `src/modules/auth/` — register/login, JWT, guards/strategies, `User` entity  
+- `src/modules/event/` — HTTP, DTOs, service, queue jobs, `Event` entity, failure logs  
+- `src/modules/task-management/` — task API and service, `Task` entity, state machine in `state-machine/task.state-machine.ts`  
+- `src/modules/worker/worker.ts` — task queue consumer (`worker` Compose service)  
+- `src/modules/mail-worker/` — mail queue consumer and SMTP sending (`mailworker` Compose service)  
+- `src/common/` — enums, constants, base entity, pagination, shared helpers  
+- `src/config/` — JWT and mail configuration  
+- `src/database/` — MikroORM module, migrations, `seeders/database.seeder.ts` (`pnpm seed`)  
+- `mikro-orm.config.ts` — ORM / DB connection  
+- `docker-compose.yml` — Postgres, Redis, MailHog, API, task worker, mail worker  

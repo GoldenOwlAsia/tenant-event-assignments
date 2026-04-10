@@ -13,6 +13,12 @@ services:
       retries: 10
       start_period: 10s
 
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - '1025:1025' # SMTP server
+      - '8025:8025' # Web UI 
+
   redis:
     container_name: bullmq-redis
     image: redis:7-alpine
@@ -32,10 +38,14 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       PORT: "3000"
+      MAIL_HOST: mailhog
+      MAIL_PORT: "1025"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_started
+      mailhog:
         condition: service_started
 
   worker:
@@ -53,4 +63,25 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_started
+
+  mailworker:
+    build: .
+    command: ["node", "dist/src/modules/mail-worker/mail-worker.js"]
+    container_name: assignment-mailworker
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      MAIL_HOST: mailhog
+      MAIL_PORT: "1025"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailhog:
         condition: service_started

@@ -10,9 +10,6 @@ import { Event } from './event.entity';
 })
 export class EventFailureLog extends Base {
   @Property({ type: 'string' })
-  tenantId: string;
-
-  @Property({ type: 'string' })
   jobId: string;
 
   @Property({ type: 'number' })

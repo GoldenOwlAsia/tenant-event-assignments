@@ -6,15 +6,23 @@ import { Event } from './entities/event.entity';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { EventFailureLog } from './entities/event-failure-log.entity';
+import { Task } from '../task-management/entity/task.entity';
+
 @Module({
   imports: [
-    MikroOrmModule.forFeature([Event, EventFailureLog]),
+    MikroOrmModule.forFeature([Event, EventFailureLog, Task]),
     ConfigModule,
-    BullModule.registerQueue({
-      name: 'event-queue',
-    }),
+    BullModule.registerQueueAsync(
+      {
+        name: 'task-processing-queue',
+      },
+      {
+        name: 'mail-processing-queue',
+      },
+    ),
   ],
   controllers: [EventController],
   providers: [EventService],
+  exports: [EventService],
 })
 export class EventModule {}

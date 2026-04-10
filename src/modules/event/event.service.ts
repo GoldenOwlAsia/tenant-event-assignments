@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventRepository } from './repository/event.repository';
 import { InjectRepository } from '@mikro-orm/nestjs';
@@ -9,6 +9,9 @@ import { Queue } from 'bullmq';
 import { Event } from './entities/event.entity';
 import { EventFailureLog } from './entities/event-failure-log.entity';
 import { EventFailureLogRepository } from './repository/event-failure-log.repository';
+import { EventStatus } from '@/common/enum/status.enum';
+import { QUEUE_CONFIG } from '@/common/constant/event.constant';
+import { EventType } from '@/common/enum/event.enum';
 
 @Injectable()
 export class EventService {
@@ -18,42 +21,67 @@ export class EventService {
     @InjectRepository(Event)
     private readonly eventRepository: EventRepository,
     private readonly em: EntityManager,
-    @InjectQueue('event-queue') private processEventQueue: Queue,
+    @InjectQueue('task-processing-queue') private processEventQueue: Queue,
+    @InjectQueue('mail-processing-queue') private mailProcessingQueue: Queue,
     @InjectRepository(EventFailureLog)
     private readonly eventFailureLogRepository: EventFailureLogRepository,
   ) {}
 
-  async createEvent(createEventDto: CreateEventDto) {
-    const event = this.eventRepository.create(createEventDto);
+  private async pushEventToQueue(
+    createEventDto: CreateEventDto,
+    eventId: string,
+  ) {
+    switch (createEventDto.event) {
+      case EventType.TASK_CREATE:
+        return await this.processEventQueue.add(
+          createEventDto.event,
+          {
+            eventId,
+            taskId: createEventDto.taskId,
+            data: createEventDto.data,
+          },
+          QUEUE_CONFIG,
+        );
+      case EventType.MAIL_NOTIFICATION:
+        return await this.mailProcessingQueue.add(
+          createEventDto.event,
+          {
+            eventId,
+            taskId: createEventDto.taskId,
+            data: createEventDto.data,
+          },
+          QUEUE_CONFIG,
+        );
+      default:
+        throw new BadRequestException('Invalid event type');
+    }
+  }
+
+  async createTaskProcessingEvent(createEventDto: CreateEventDto) {
+    const event = this.eventRepository.create({
+      taskId: createEventDto.taskId,
+      payload: createEventDto.data,
+      status: EventStatus.PENDING,
+    });
 
     await this.em.flush();
 
     this.logger.log(`Event created: ${event.id}`);
 
     // Push event to queue
-    const job = await this.processEventQueue.add(
-      'process-event',
-      {
-        eventId: event.id,
-        tenantId: event.tenantId,
-        payload: event.payload,
-      },
-      {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000,
-        },
-      },
-    );
+    const job = await this.pushEventToQueue(createEventDto, event.id);
 
-    this.logger.log(`Push to queue: ${job.id}`);
+    this.logger.log(
+      `Push to queue: ${job.name} for taskId: ${createEventDto.taskId}`,
+    );
     return event;
   }
 
-  async getEventFailureLogs(tenantId: string) {
+  async getEventFailureLogs(taskId: string) {
     return this.eventFailureLogRepository.find({
-      tenantId,
+      event: {
+        taskId: taskId,
+      },
     });
   }
 }

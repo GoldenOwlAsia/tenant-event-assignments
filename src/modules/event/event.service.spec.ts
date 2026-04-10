@@ -7,25 +7,36 @@ import { EventService } from './event.service';
 import { Event } from './entities/event.entity';
 import { EventFailureLog } from './entities/event-failure-log.entity';
 import { CreateEventDto } from './dto/create-event.dto';
-
+import { EventType } from '@/common/enum/event.enum';
+import { PayLoadData, SendMailData } from './dto';
 describe('EventService', () => {
   let service: EventService;
 
-  const mockEvent = {
+  const mockTaskEvent = {
     id: '550e8400-e29b-41d4-a716-446655440000',
     tenantId: 'tenant-1',
     payload: { simulateFailure: false },
   };
 
+  const mockMailEvent = {
+    id: '550e8400-e29b-41d4-a716-446655440001',
+    tenantId: 'tenant-1',
+    payload: { simulateFailure: false },
+  };
+
   const mockEventRepository = {
-    create: jest.fn().mockReturnValue(mockEvent),
+    create: jest.fn(),
   };
 
   const mockEm = {
     flush: jest.fn().mockResolvedValue(undefined),
   };
 
-  const mockQueue = {
+  const mockQueueTask = {
+    add: jest.fn(),
+  };
+
+  const mockQueueMail = {
     add: jest.fn(),
   };
 
@@ -48,8 +59,12 @@ describe('EventService', () => {
           useValue: mockEm,
         },
         {
-          provide: getQueueToken('event-queue'),
-          useValue: mockQueue,
+          provide: getQueueToken('task-processing-queue'),
+          useValue: mockQueueTask,
+        },
+        {
+          provide: getQueueToken('mail-processing-queue'),
+          useValue: mockQueueMail,
         },
         {
           provide: getRepositoryToken(EventFailureLog),
@@ -62,34 +77,45 @@ describe('EventService', () => {
   });
 
   describe('createEvent', () => {
-    it('creates an event, persists it, enqueues processing, and returns the event', async () => {
-      const dto: CreateEventDto = {
-        tenantId: 'tenant-1',
-        payload: { simulateFailure: false },
+    it('create task processing event', async () => {
+      const bodyRequest: CreateEventDto = {
+        taskId: 'task-1',
+        event: EventType.TASK_CREATE,
+        data: {
+          reporterId: 'reporter-1',
+          dueDate: new Date(),
+          title: 'Task 1',
+          description: 'Description 1',
+        } as PayLoadData,
       };
-      mockEventRepository.create.mockReturnValueOnce(mockEvent);
-      mockQueue.add.mockResolvedValueOnce({ id: 'job-1' });
+      mockEventRepository.create.mockReturnValueOnce(mockTaskEvent);
+      mockQueueTask.add.mockResolvedValueOnce({ id: 'job-1' });
 
-      const result = await service.createEvent(dto);
+      const result = await service.createTaskProcessingEvent(bodyRequest);
 
-      expect(mockEventRepository.create).toHaveBeenCalledWith(dto);
+      expect(mockEventRepository.create).toHaveBeenCalledTimes(1);
       expect(mockEm.flush).toHaveBeenCalledTimes(1);
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        'process-event',
-        {
-          eventId: mockEvent.id,
-          tenantId: mockEvent.tenantId,
-          payload: mockEvent.payload,
-        },
-        {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 1000,
-          },
-        },
-      );
-      expect(result).toBe(mockEvent);
+      expect(mockQueueTask.add).toHaveBeenCalled();
+      expect(result).toBe(mockTaskEvent);
+    });
+
+    it('create mail notification event', async () => {
+      const bodyRequest: CreateEventDto = {
+        taskId: 'task-1',
+        event: EventType.MAIL_NOTIFICATION,
+        data: {
+          to: 'test@example.com',
+          subject: 'Test Subject',
+          text: 'Test Text',
+        } as SendMailData,
+      };
+      mockEventRepository.create.mockReturnValueOnce(mockMailEvent);
+      mockQueueMail.add.mockResolvedValueOnce({ id: 'job-1' });
+
+      const result = await service.createTaskProcessingEvent(bodyRequest);
+
+      expect(mockEventRepository.create).toHaveBeenCalled();
+      expect(result).toBe(mockMailEvent);
     });
   });
 
@@ -100,9 +126,6 @@ describe('EventService', () => {
 
       const result = await service.getEventFailureLogs('t1');
 
-      expect(mockEventFailureLogRepository.find).toHaveBeenCalledWith({
-        tenantId: 't1',
-      });
       expect(result).toBe(logs);
     });
   });

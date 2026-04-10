@@ -1,18 +1,18 @@
 import { Entity, Property } from '@mikro-orm/core';
 
-import { Status } from '@/common/enum/status.enum';
+import { EventStatus } from '@/common/enum/status.enum';
 import { Base } from '@/common/entity';
-import { PayloadDto } from '../dto';
+import { PayLoadData } from '../dto';
 import { EventRepository } from '../repository/event.repository';
 
 @Entity({ tableName: 'event', repository: () => EventRepository })
 export class Event extends Base {
-  @Property({ type: 'string', unique: true })
-  tenantId: string;
+  @Property({ type: 'string', nullable: false })
+  taskId: string;
 
   @Property({ type: 'jsonb', nullable: true })
-  payload: PayloadDto;
+  payload: PayLoadData;
 
-  @Property({ type: 'string', nullable: false, default: Status.PENDING })
-  status: Status;
+  @Property({ type: 'string', nullable: false, default: EventStatus.PENDING })
+  status: EventStatus;
 }
