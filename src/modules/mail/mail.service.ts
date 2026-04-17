@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { createTransport, type Transporter } from 'nodemailer';
 
 export type SendMailOptions = {
+  /** When set, overrides `MAIL_FROM` for this message (e.g. tenant-specific sender). */
+  from?: string;
   to: string | string[];
   subject: string;
   text?: string;
@@ -42,20 +44,17 @@ function buildMailSender(): MailSender {
         : undefined,
   });
 
-  const from = process.env.MAIL_FROM ?? 'noreply@localhost';
+  const defaultFrom = process.env.MAIL_FROM ?? 'noreply@localhost';
 
   return {
     async sendMail(options: SendMailOptions) {
       await transporter.sendMail({
-        from,
+        from: options.from ?? defaultFrom,
         to: options.to,
         subject: options.subject,
         text: options.text,
         html: options.html,
       });
-      console.log(
-        `[mail] sent: to=${JSON.stringify(options.to)} subject=${options.subject}`,
-      );
     },
   };
 }

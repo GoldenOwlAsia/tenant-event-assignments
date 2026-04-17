@@ -11,6 +11,10 @@ export class CreateEventDto {
   @IsNotEmpty()
   event: EventType;
 
+  @IsString()
+  @IsNotEmpty()
+  tenantId: string;
+
   @IsObject()
   @IsNotEmpty()
   data: PayLoadData | SendMailData;
@@ -18,6 +22,7 @@ export class CreateEventDto {
 
 export class EventPayload {
   eventId: string;
+  tenantId: string;
   taskId: string;
   data: PayLoadData | SendMailData;
 }

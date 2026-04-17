@@ -20,7 +20,9 @@ export class LoginHandler implements ICommandHandler<
     const payload: TokenPayloadDto = {
       sub: req.id,
       email: req.email,
+      tenantId: req.tenantId,
       role: req.role,
+      scope: 'tenant',
     };
     const accessToken = this.jwtService.sign(payload);
     return { accessToken };

@@ -62,26 +62,29 @@ export class TaskActionHandler implements ICommandHandler<
         id: assignTaskDto.userId,
       });
       task.assignedTo = assignedTo;
+    } else if (to === TaskStatus.CREATED) {
+      task.assignedTo = null;
     }
 
     task.taskStatus = to;
     this.em.persist(task);
     await this.em.flush();
 
-    await this.notifyByEmail(task);
+    await this.notifyByEmail(task, user.tenantId);
 
     return mapTaskToDto(task);
   }
 
-  private async notifyByEmail(task: Task) {
+  private async notifyByEmail(task: Task, tenantId: string) {
     if (task.taskStatus === TaskStatus.ASSIGNED) {
       const recipient = await this.userRepository.findOneOrFail({
         id: task.assignedTo?.id,
       });
 
-      const subject = `Task: ${task.title}`;
+      const subject = `Tenant ${tenantId} - Task: ${task.title}`;
       const text = `Hi ${recipient.name}, Notification for task "${task.title}" (id: ${task.id}). You have been assigned to the task.`;
       await this.eventService.createTaskProcessingEvent({
+        tenantId: tenantId,
         event: EventType.MAIL_NOTIFICATION,
         taskId: task.id,
         data: { to: recipient.email, subject, text },
@@ -90,9 +93,10 @@ export class TaskActionHandler implements ICommandHandler<
       const recipient = await this.userRepository.findOneOrFail({
         id: task.reporter?.id,
       });
-      const subject = `Task: ${task.title}`;
+      const subject = `Tenant ${tenantId} - Task: ${task.title}`;
       const text = `Hi ${recipient.name}, Notification for task "${task.title}" (id: ${task.id}). Please review the task.`;
       await this.eventService.createTaskProcessingEvent({
+        tenantId: tenantId,
         event: EventType.MAIL_NOTIFICATION,
         taskId: task.id,
         data: { to: recipient.email, subject, text } as SendMailData,

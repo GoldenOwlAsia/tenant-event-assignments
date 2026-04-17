@@ -32,6 +32,7 @@ describe('EventService', () => {
 
   const mockEm = {
     flush: jest.fn().mockResolvedValue(undefined),
+    schema: 'public',
   };
 
   const mockQueueTask = {
@@ -79,10 +80,11 @@ describe('EventService', () => {
   });
 
   describe('createEvent', () => {
-    it('create task processing event', async () => {
+    it('should create task processing event', async () => {
       const bodyRequest: CreateEventDto = {
         taskId: 'task-1',
         event: EventType.TASK_CREATE,
+        tenantId: 'public',
         data: {
           reporterId: 'reporter-1',
           dueDate: new Date(),
@@ -101,10 +103,11 @@ describe('EventService', () => {
       expect(result).toBe(mockTaskEvent);
     });
 
-    it('create mail notification event', async () => {
+    it('should create mail notification event', async () => {
       const bodyRequest: CreateEventDto = {
         taskId: 'task-1',
         event: EventType.MAIL_NOTIFICATION,
+        tenantId: 'public',
         data: {
           to: 'test@example.com',
           subject: 'Test Subject',
@@ -122,7 +125,7 @@ describe('EventService', () => {
   });
 
   describe('getEventFailureLogs', () => {
-    it('returns failure logs for the tenant', async () => {
+    it('should return failure logs for the tenant', async () => {
       const logs = [{ id: 'log-1', tenantId: 't1' }];
       mockEventFailureLogRepository.find.mockResolvedValueOnce(logs);
 

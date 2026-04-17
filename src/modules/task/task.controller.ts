@@ -7,13 +7,15 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiParam, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 
-import { JwtAuthGuard, RolesGuard } from '@/modules/auth/guard';
 import { ReqUser } from '@/common/decorator/api.decorator';
 import { IJwtStrategy } from '@/modules/auth/strategies/jwt.strategy';
-import { PaginationQueryDto, PaginationResponseDto } from '@/common/dto/pagination.dto';
+import {
+  PaginationQueryDto,
+  PaginationResponseDto,
+} from '@/common/dto/pagination.dto';
 import {
   CreateTaskBodyRequestDto,
   CreateTaskResponseDto,
@@ -26,11 +28,13 @@ import { TaskAction } from '@/modules/task/enum/action.enum';
 import { FindAllTasksPaginatedQuery } from './query/find-all-tasks-paginated.query';
 import { CreateTaskCommand } from './command/create-task.command';
 import { TaskActionCommand } from './command/task-action.command';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '@/modules/auth/guard/role.guard';
 
 @Controller('task')
 @ApiTags('Task')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiSecurity({ bearer: [], TENANT_ID_HEADER: [] })
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class TaskController {
   constructor(
     private readonly commandBus: CommandBus,
@@ -51,10 +55,7 @@ export class TaskController {
     @ReqUser() req: IJwtStrategy,
     @Body() createTaskDto: CreateTaskBodyRequestDto,
   ): Promise<CreateTaskResponseDto> {
-    const { id: reporterId } = req;
-    return this.commandBus.execute(
-      new CreateTaskCommand(reporterId, createTaskDto),
-    );
+    return this.commandBus.execute(new CreateTaskCommand(req, createTaskDto));
   }
 
   @Post('action/:taskId/:action')

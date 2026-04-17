@@ -9,6 +9,7 @@ import { EventFailureLog } from './entities/event-failure-log.entity';
 import { Task } from '../task/entity/task.entity';
 import { TASK_PROCESSING_QUEUE } from '../task/task.queue';
 import { MAIL_PROCESSING_QUEUE } from '../mail/mail.queue';
+import { RolesGuard } from '@/modules/auth/guard/role.guard';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { MAIL_PROCESSING_QUEUE } from '../mail/mail.queue';
     ),
   ],
   controllers: [EventController],
-  providers: [EventService],
+  providers: [EventService, RolesGuard],
   exports: [EventService],
 })
 export class EventModule {}

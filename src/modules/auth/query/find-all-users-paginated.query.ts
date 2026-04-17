@@ -2,7 +2,10 @@ import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { User } from '../entity/user.entity';
 import { EntityRepository } from '@mikro-orm/postgresql';
-import { PaginationQueryDto, PaginationResponseDto } from '@/common/dto/pagination.dto';
+import {
+  PaginationQueryDto,
+  PaginationResponseDto,
+} from '@/common/dto/pagination.dto';
 import { UserDto } from '../dto/user.dto';
 
 export class FindAllUsersPaginatedQuery {

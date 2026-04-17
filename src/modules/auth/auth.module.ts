@@ -1,8 +1,13 @@
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
+import { PublicAdmin } from './entity/public-admin.entity';
 import { User } from './entity/user.entity';
+import { AdminLoginHandler } from './command/admin-login.command';
 import { LocalStrategy } from './strategies/local.strategy';
+import { LocalAdminStrategy } from './strategies/local-admin.strategy';
+import { ValidatePublicAdminHandler } from './query/validate-public-admin.query';
+import { ValidatePublicAdminJwtHandler } from './query/validate-public-admin-jwt.query';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -14,12 +19,16 @@ import { ValidateJwtUserHandler } from './query/validate-jwt-user.query';
 import { GetMyInfoHandler } from './query/get-my-info.query';
 import { FindAllUsersPaginatedHandler } from './query/find-all-users-paginated.query';
 import { FindUserByEmailHandler } from './query/find-user-by-email.query';
+import { RolesGuard } from './guard/role.guard';
 
 const authHandlers = [
   RegisterUserHandler,
   LoginHandler,
+  AdminLoginHandler,
   ValidateUserHandler,
   ValidateJwtUserHandler,
+  ValidatePublicAdminHandler,
+  ValidatePublicAdminJwtHandler,
   GetMyInfoHandler,
   FindAllUsersPaginatedHandler,
   FindUserByEmailHandler,
@@ -28,7 +37,7 @@ const authHandlers = [
 @Module({
   imports: [
     CqrsModule,
-    MikroOrmModule.forFeature([User]),
+    MikroOrmModule.forFeature([User, PublicAdmin]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -41,6 +50,12 @@ const authHandlers = [
     }),
   ],
   controllers: [AuthController],
-  providers: [...authHandlers, LocalStrategy, JwtStrategy],
+  providers: [
+    ...authHandlers,
+    LocalStrategy,
+    LocalAdminStrategy,
+    JwtStrategy,
+    RolesGuard,
+  ],
 })
 export class AuthModule {}

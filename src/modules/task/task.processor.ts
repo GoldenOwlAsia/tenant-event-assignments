@@ -18,6 +18,7 @@ import { Task } from '@/modules/task/entity/task.entity';
 import { User } from '@/modules/auth/entity/user.entity';
 import { MAIL_PROCESSING_QUEUE } from '@/modules/mail/mail.queue';
 import { TASK_PROCESSING_QUEUE } from './task.queue';
+import { sanitizedTenantName } from '@/common/tenant';
 
 @Processor(TASK_PROCESSING_QUEUE, { lockDuration: 30000 })
 @Injectable()
@@ -32,7 +33,8 @@ export class TaskProcessor extends WorkerHost {
   }
 
   async process(job: Job<EventPayload>): Promise<void> {
-    const fork = this.em.fork();
+    const schema = sanitizedTenantName(job.data.tenantId);
+    const fork = this.em.fork({ schema });
     const { eventId, taskId, data } = job.data;
     this.logger.log(`Processing job: taskId: ${taskId}`);
 
@@ -69,12 +71,13 @@ export class TaskProcessor extends WorkerHost {
         {
           eventId: job.data.eventId,
           taskId: job.data.taskId,
+          tenantId: job.data.tenantId,
           data: {
             to: reporter.email,
-            subject: `Task ${task.title} create success`,
+            subject: `Tenant ${schema} - Task ${task.title} create success`,
             text: `Hi ${reporter.name}, Task ${task.title}(taskId: ${task.id}) has been created successfully`,
           },
-        },
+        } as EventPayload,
         QUEUE_CONFIG,
       );
     } catch (error: unknown) {
@@ -99,10 +102,14 @@ export class TaskProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent('failed')
-  async onFailed(job: Job<EventPayload> | undefined, err: Error): Promise<void> {
+  async onFailed(
+    job: Job<EventPayload> | undefined,
+    err: Error,
+  ): Promise<void> {
     if (!job) return;
 
-    const fork = this.em.fork();
+    const schema = sanitizedTenantName(job.data.tenantId);
+    const fork = this.em.fork({ schema });
     const eventRepository = fork.getRepository(Event);
     const eventFailureLogRepository = fork.getRepository(EventFailureLog);
 
@@ -145,12 +152,13 @@ export class TaskProcessor extends WorkerHost {
           {
             eventId: job.data.eventId,
             taskId: job.data.taskId,
+            tenantId: job.data.tenantId,
             data: {
               to: recipient.email,
-              subject: 'Task Creation Failed',
+              subject: `Tenant ${schema} - Task Creation Failed`,
               text: `Hi ${recipient.name}, we cannot create the task ${job.data?.data?.title}, (taskId: ${job.data?.data?.taskId}) please try again later.`,
             },
-          },
+          } as EventPayload,
           QUEUE_CONFIG,
         );
       }

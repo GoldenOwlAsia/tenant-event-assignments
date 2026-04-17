@@ -11,6 +11,7 @@ const SEED_TASK_TITLES = [
   'QA sign-off',
 ] as const;
 
+/** Demo users and tasks in a **tenant** schema (fork `EntityManager` to that schema). */
 export class DatabaseSeeder extends Seeder {
   async run(em: EntityManager): Promise<void> {
     const defaultUsers = [
@@ -32,7 +33,6 @@ export class DatabaseSeeder extends Seeder {
       const existingUser = await em.findOne(User, { email: seedUser.email });
       if (existingUser) continue;
 
-      // Password is intentionally plain text here; User.@BeforeCreate hashes it.
       const user = em.create(User, seedUser);
       em.persist(user);
     }

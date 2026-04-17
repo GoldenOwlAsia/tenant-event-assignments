@@ -3,12 +3,15 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { EntityManager } from '@mikro-orm/postgresql';
 
+import { getPublicSchema } from '@/common/tenant/public-schema';
 import { Event } from '@/modules/event/entities/event.entity';
 import { EventFailureLog } from '@/modules/event/entities/event-failure-log.entity';
 import { EventPayload } from '@/modules/event/dto';
 import { EventStatus, EventType } from '@/modules/event/enum/event.enum';
+import { Tenant } from '@/modules/tenant/entity/tenant.entity';
 import { MAIL_PROCESSING_QUEUE } from './mail.queue';
 import { MailService } from './mail.service';
+import { sanitizedTenantName } from '@/common/tenant';
 
 @Processor(MAIL_PROCESSING_QUEUE, { lockDuration: 30000 })
 @Injectable()
@@ -28,7 +31,8 @@ export class MailProcessor extends WorkerHost {
       return;
     }
 
-    const fork = this.em.fork();
+    const schema = sanitizedTenantName(job.data.tenantId);
+    const fork = this.em.fork({ schema });
     const { eventId, taskId, data } = job.data;
 
     if (!data || !('to' in data)) {
@@ -42,7 +46,12 @@ export class MailProcessor extends WorkerHost {
       status: EventStatus.PROCESSING,
     });
 
+    const publicFork = this.em.fork({ schema: getPublicSchema() });
+    const tenantRow = await publicFork.findOne(Tenant, { name: schema });
+    const tenantFrom = tenantRow?.fromEmail?.trim();
+
     await this.mailService.sendMail({
+      ...(tenantFrom ? { from: tenantFrom } : {}),
       to: data.to,
       subject: data.subject,
       text: data.text,
@@ -70,7 +79,8 @@ export class MailProcessor extends WorkerHost {
     job: Job<EventPayload> | undefined,
     failureError: Error,
   ): Promise<void> {
-    const fork = this.em.fork();
+    const schema = sanitizedTenantName(job?.data?.tenantId);
+    const fork = this.em.fork({ schema });
     if (!job || job.name === 'mail_test') return;
 
     const data = job.data as EventPayload;
@@ -89,7 +99,7 @@ export class MailProcessor extends WorkerHost {
 
     await fork.flush();
     this.logger.error(
-      `[mail] failed taskId=${data.taskId} attempt=${job.attemptsMade}`,
+      `[mail] failed taskId=${data.taskId} attempt=${job.attemptsMade}, tenant=${schema}`,
       failureError,
     );
 
@@ -99,7 +109,9 @@ export class MailProcessor extends WorkerHost {
       await eventRepository.nativeUpdate(data.eventId, {
         status: EventStatus.FAILED,
       });
-      this.logger.log(`[mail] moved to DLQ jobId=${job.id} taskId=${data.taskId}`);
+      this.logger.log(
+        `[mail] moved to DLQ jobId=${job.id} taskId=${data.taskId},  tenant=${schema}`,
+      );
     }
   }
 }

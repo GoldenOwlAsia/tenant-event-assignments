@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { CreateEventDto } from './dto/create-event.dto';
+import { sanitizedTenantName } from '@/common/tenant/tenant-schema.util';
+import { CreateEventDto, EventPayload } from './dto/create-event.dto';
 import { EventRepository } from './repository/event.repository';
 import { InjectRepository } from '@mikro-orm/nestjs';
 
@@ -33,25 +34,28 @@ export class EventService {
     createEventDto: CreateEventDto,
     eventId: string,
   ) {
+    const tenantSchema = sanitizedTenantName(createEventDto.tenantId);
     switch (createEventDto.event) {
       case EventType.TASK_CREATE:
         return await this.processEventQueue.add(
           createEventDto.event,
           {
+            tenantId: tenantSchema,
             eventId,
             taskId: createEventDto.taskId,
             data: createEventDto.data,
-          },
+          } as EventPayload,
           QUEUE_CONFIG,
         );
       case EventType.MAIL_NOTIFICATION:
         return await this.mailProcessingQueue.add(
           createEventDto.event,
           {
+            tenantId: tenantSchema,
             eventId,
             taskId: createEventDto.taskId,
             data: createEventDto.data,
-          },
+          } as EventPayload,
           QUEUE_CONFIG,
         );
       default:

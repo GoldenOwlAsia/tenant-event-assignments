@@ -8,6 +8,7 @@ import { User } from '../entity/user.entity';
 import { Role } from '@/modules/auth/enum/role.enum';
 import { RegisterUserHandler } from './register-user.command';
 import { LoginHandler } from './login.command';
+import { RegisterBodyDto } from '../dto/register.dto';
 import { RegisterUserCommand } from './register-user.command';
 import { LoginCommand } from './login.command';
 
@@ -77,14 +78,14 @@ describe('Auth command handlers', () => {
   });
 
   describe('RegisterUserHandler', () => {
-    const registerDto = {
+    const registerDto: RegisterBodyDto = {
       email: 'new@example.com',
       password: 'password12',
       name: 'New User',
       role: Role.USER,
     };
 
-    it('throws when email is already registered', async () => {
+    it('should throw when email is already registered', async () => {
       mockUserRepository.findOne.mockResolvedValueOnce(mockUser);
 
       await expect(
@@ -93,7 +94,7 @@ describe('Auth command handlers', () => {
       expect(mockUserRepository.create).not.toHaveBeenCalled();
     });
 
-    it('creates user, persists, and returns dto', async () => {
+    it('should create user, persist, and return dto', async () => {
       mockUserRepository.findOne.mockResolvedValueOnce(null);
       mockUserRepository.create.mockReturnValueOnce(mockUser);
 
@@ -113,11 +114,12 @@ describe('Auth command handlers', () => {
   });
 
   describe('LoginHandler', () => {
-    it('returns access token from jwt sign', async () => {
+    it('should return access token from jwt sign', async () => {
       const req = {
         id: userId,
         email: 'user@example.com',
         role: Role.USER,
+        tenantId: 'public',
       };
 
       const result = await loginHandler.execute(new LoginCommand(req));
@@ -125,7 +127,9 @@ describe('Auth command handlers', () => {
       expect(mockJwtService.sign).toHaveBeenCalledWith({
         sub: req.id,
         email: req.email,
+        tenantId: req.tenantId,
         role: req.role,
+        scope: 'tenant',
       });
       expect(result).toEqual({ accessToken: 'signed-jwt-token' });
     });

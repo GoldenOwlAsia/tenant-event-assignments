@@ -3,7 +3,10 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/postgresql';
 
 import { IJwtStrategy } from '@/modules/auth/strategies/jwt.strategy';
-import { PaginationQueryDto, PaginationResponseDto } from '@/common/dto/pagination.dto';
+import {
+  PaginationQueryDto,
+  PaginationResponseDto,
+} from '@/common/dto/pagination.dto';
 import { Role } from '@/modules/auth/enum/role.enum';
 
 import { Task } from '../entity/task.entity';
@@ -46,7 +49,6 @@ export class FindAllTasksPaginatedHandler implements IQueryHandler<
         ...(search ? { title: { $ilike: `%${search}%` } } : {}),
       },
       {
-        populate: ['assignedTo', 'reporter'],
         limit: pageSize,
         offset: skip,
         orderBy: { createdAt: 'DESC' },

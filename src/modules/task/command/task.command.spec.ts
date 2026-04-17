@@ -47,7 +47,7 @@ function mockAssigneeUser(): Partial<User> {
 
 function jwtStrategyContext(id: string, role: Role): IJwtStrategy {
   const user = { id, role, name: 'U', email: 'u@example.com' } as User;
-  return { id, role, user };
+  return { id, role, user, tenantId: 'public', scope: 'tenant' };
 }
 
 function createMockTaskRepository() {
@@ -110,7 +110,7 @@ describe('CreateTaskHandler', () => {
     handler = module.get(CreateTaskHandler);
   });
 
-  it('emits task create event and returns pending message', async () => {
+  it('should emit task create event and return pending message', async () => {
     const dueDate = new Date('2026-06-01');
     const createDto = {
       title: 'New task',
@@ -119,11 +119,15 @@ describe('CreateTaskHandler', () => {
     };
 
     const result = await handler.execute(
-      new CreateTaskCommand(commandSpecIds.reporterId, createDto),
+      new CreateTaskCommand(
+        jwtStrategyContext(commandSpecIds.reporterId, Role.REPORTER),
+        createDto,
+      ),
     );
 
     expect(mockEventService.createTaskProcessingEvent).toHaveBeenCalledTimes(1);
     expect(mockEventService.createTaskProcessingEvent).toHaveBeenCalledWith({
+      tenantId: 'public',
       event: EventType.TASK_CREATE,
       taskId: commandSpecIds.taskId,
       data: {
@@ -182,7 +186,7 @@ describe('TaskActionHandler', () => {
     handler = module.get(TaskActionHandler);
   });
 
-  it('throws Forbidden when role is not allowed', async () => {
+  it('should throw Forbidden when role is not allowed', async () => {
     mockTaskRepository.findOneOrFail.mockResolvedValueOnce(
       buildTaskFixture(mockReporter, TaskStatus.CREATED),
     );
@@ -200,7 +204,7 @@ describe('TaskActionHandler', () => {
     expect(mockEm.flush).not.toHaveBeenCalled();
   });
 
-  it('throws BadRequest when transition to ASSIGNED requires userId but it is missing', async () => {
+  it('should throw BadRequest when transition to ASSIGNED requires userId but it is missing', async () => {
     mockTaskRepository.findOneOrFail.mockResolvedValueOnce(
       buildTaskFixture(mockReporter, TaskStatus.CREATED),
     );
@@ -217,12 +221,10 @@ describe('TaskActionHandler', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('ASSIGN from CREATED assigns user and updates status', async () => {
+  it('should assign user and update status when ASSIGN from CREATED', async () => {
     const task = buildTaskFixture(mockReporter, TaskStatus.CREATED);
     mockTaskRepository.findOneOrFail.mockResolvedValueOnce(task);
-    mockUserRepository.findOneOrFail
-      .mockResolvedValueOnce(mockAssignee)
-      .mockResolvedValueOnce(mockAssignee);
+    mockUserRepository.findOneOrFail.mockResolvedValue(mockAssignee);
 
     const result = await handler.execute(
       new TaskActionCommand(
@@ -242,18 +244,23 @@ describe('TaskActionHandler', () => {
     expect(mockEm.flush).toHaveBeenCalledTimes(1);
     expect(result.taskStatus).toBe(TaskStatus.ASSIGNED);
     expect(mockEventService.createTaskProcessingEvent).toHaveBeenCalledWith({
+      tenantId: 'public',
       event: EventType.MAIL_NOTIFICATION,
       taskId: task.id,
       data: {
         to: mockAssignee.email,
-        subject: `Task: ${task.title}`,
+        subject: `Tenant public - Task: ${task.title}`,
         text: `Hi ${mockAssignee.name}, Notification for task "${task.title}" (id: ${task.id}). You have been assigned to the task.`,
       },
     });
   });
 
-  it('START from ASSIGNED moves to IN_PROGRESS for USER', async () => {
-    const task = buildTaskFixture(mockReporter, TaskStatus.ASSIGNED, mockAssignee);
+  it('should move to IN_PROGRESS for USER when START from ASSIGNED', async () => {
+    const task = buildTaskFixture(
+      mockReporter,
+      TaskStatus.ASSIGNED,
+      mockAssignee,
+    );
     mockTaskRepository.findOneOrFail.mockResolvedValueOnce(task);
 
     const result = await handler.execute(
@@ -271,8 +278,12 @@ describe('TaskActionHandler', () => {
     expect(mockEventService.createTaskProcessingEvent).not.toHaveBeenCalled();
   });
 
-  it('UNASSIGN from ASSIGNED returns task to CREATED for REPORTER', async () => {
-    const task = buildTaskFixture(mockReporter, TaskStatus.ASSIGNED, mockAssignee);
+  it('should return task to CREATED for REPORTER when UNASSIGN from ASSIGNED', async () => {
+    const task = buildTaskFixture(
+      mockReporter,
+      TaskStatus.ASSIGNED,
+      mockAssignee,
+    );
     mockTaskRepository.findOneOrFail.mockResolvedValueOnce(task);
 
     await handler.execute(
@@ -288,8 +299,12 @@ describe('TaskActionHandler', () => {
     expect(mockEventService.createTaskProcessingEvent).not.toHaveBeenCalled();
   });
 
-  it('REQUEST_REVIEW from IN_PROGRESS notifies reporter by email', async () => {
-    const task = buildTaskFixture(mockReporter, TaskStatus.IN_PROGRESS, mockAssignee);
+  it('should notify reporter by email when REQUEST_REVIEW from IN_PROGRESS', async () => {
+    const task = buildTaskFixture(
+      mockReporter,
+      TaskStatus.IN_PROGRESS,
+      mockAssignee,
+    );
     mockTaskRepository.findOneOrFail.mockResolvedValueOnce(task);
     mockUserRepository.findOneOrFail.mockResolvedValueOnce(mockReporter);
 
@@ -304,11 +319,12 @@ describe('TaskActionHandler', () => {
 
     expect(task.taskStatus).toBe(TaskStatus.PENDING_REVIEW);
     expect(mockEventService.createTaskProcessingEvent).toHaveBeenCalledWith({
+      tenantId: 'public',
       event: EventType.MAIL_NOTIFICATION,
       taskId: task.id,
       data: {
         to: mockReporter.email,
-        subject: `Task: ${task.title}`,
+        subject: `Tenant public - Task: ${task.title}`,
         text: `Hi ${mockReporter.name}, Notification for task "${task.title}" (id: ${task.id}). Please review the task.`,
       },
     });

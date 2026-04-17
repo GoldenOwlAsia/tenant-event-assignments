@@ -1,6 +1,7 @@
 import { Migration } from '@mikro-orm/migrations';
 
-export class Migration20260403102334 extends Migration {
+/** Creates `event` and `event_failure_logs` in each tenant schema. */
+export class Migration20260403102334_CreateEventAndEventFailureLogTables extends Migration {
   override async up(): Promise<void> {
     this.addSql(
       `create table "event" ("id" varchar(255) not null, "created_at" timestamptz not null, "updated_at" timestamptz not null, "tenant_id" varchar(255) not null, "payload" jsonb null, "status" varchar(255) not null default 'pending', constraint "event_pkey" primary key ("id"));`,

@@ -8,10 +8,11 @@ import {
   CreateTaskResponseDto,
 } from '../dto/create-task.dto';
 import { EventService } from '../../event/event.service';
+import { IJwtStrategy } from '@/modules/auth/strategies/jwt.strategy';
 
 export class CreateTaskCommand {
   constructor(
-    public readonly reporterId: string,
+    public readonly user: IJwtStrategy,
     public readonly createTaskDto: CreateTaskBodyRequestDto,
   ) {}
 }
@@ -24,13 +25,14 @@ export class CreateTaskHandler implements ICommandHandler<
   constructor(private readonly eventService: EventService) {}
 
   async execute(command: CreateTaskCommand): Promise<CreateTaskResponseDto> {
-    const { reporterId, createTaskDto } = command;
+    const { user, createTaskDto } = command;
     const taskId = v4();
 
     this.eventService.createTaskProcessingEvent({
+      tenantId: user.tenantId,
       event: EventType.TASK_CREATE,
       taskId,
-      data: { ...createTaskDto, taskId, reporterId },
+      data: { ...createTaskDto, taskId, reporterId: user.id },
     });
 
     return {

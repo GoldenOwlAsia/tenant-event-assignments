@@ -1,6 +1,7 @@
 import { Migration } from '@mikro-orm/migrations';
 
-export class Migration20260410081710 extends Migration {
+/** Creates `user` and `task`; refactors `event` to use `task_id` and trims `event_failure_logs`. */
+export class Migration20260410081710_CreateUserAndTaskTables extends Migration {
   override async up(): Promise<void> {
     this.addSql(
       `create table "user" ("id" varchar(255) not null, "created_at" timestamptz not null, "updated_at" timestamptz not null, "email" varchar(255) not null, "name" varchar(255) not null, "password" varchar(255) not null, "role" varchar(255) not null default 'user', constraint "user_pkey" primary key ("id"));`,

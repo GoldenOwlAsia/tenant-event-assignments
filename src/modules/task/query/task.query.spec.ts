@@ -26,20 +26,13 @@ describe('FindAllTasksPaginatedHandler', () => {
     role: Role.REPORTER,
   };
 
-  const mockAssignee: Partial<User> = {
-    id: assigneeId,
-    name: 'Assignee',
-    email: 'assignee@example.com',
-    role: Role.USER,
-  };
-
   const mockTaskRepository = {
     findAndCount: jest.fn(),
   };
 
   const jwtCtx = (id: string, role: Role): IJwtStrategy => {
     const user = { id, role, name: 'U', email: 'u@example.com' } as User;
-    return { id, role, user };
+    return { id, role, user, tenantId: 'public', scope: 'tenant' };
   };
 
   const query = { page: 2, pageSize: 5, search: 'bug' };
@@ -73,7 +66,7 @@ describe('FindAllTasksPaginatedHandler', () => {
     handler = module.get(FindAllTasksPaginatedHandler);
   });
 
-  it('for USER role filters by assignedTo and paginates', async () => {
+  it('should filter by assignedTo and paginate for USER role', async () => {
     const tasks = [buildTask()];
     mockTaskRepository.findAndCount.mockResolvedValueOnce([tasks, 11]);
 
@@ -87,7 +80,6 @@ describe('FindAllTasksPaginatedHandler', () => {
         title: { $ilike: '%bug%' },
       },
       {
-        populate: ['assignedTo', 'reporter'],
         limit: 5,
         offset: 5,
         orderBy: { createdAt: 'DESC' },
@@ -104,7 +96,7 @@ describe('FindAllTasksPaginatedHandler', () => {
     });
   });
 
-  it('for REPORTER role does not filter by assignee', async () => {
+  it('should not filter by assignee for REPORTER role', async () => {
     mockTaskRepository.findAndCount.mockResolvedValueOnce([[], 0]);
 
     await handler.execute(

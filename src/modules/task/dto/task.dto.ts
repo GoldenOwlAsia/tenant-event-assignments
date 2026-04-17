@@ -2,7 +2,7 @@ import { TaskStatus } from '@/modules/task/enum/task-status.enum';
 
 import { Task } from '../entity/task.entity';
 
-export interface IAssign {
+interface IAssign {
   id: string;
   name: string;
 }

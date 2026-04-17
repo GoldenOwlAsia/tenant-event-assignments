@@ -20,6 +20,7 @@ export class ValidateJwtUserHandler implements IQueryHandler<
 
   async execute(query: ValidateJwtUserQuery): Promise<User> {
     const { sub, email, role } = query.payload;
+
     return await this.userRepository.findOneOrFail({
       id: sub,
       email,

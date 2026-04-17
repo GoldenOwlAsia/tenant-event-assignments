@@ -77,7 +77,7 @@ describe('Auth query handlers', () => {
   });
 
   describe('ValidateUserHandler', () => {
-    it('throws UnauthorizedException when password does not match', async () => {
+    it('should throw UnauthorizedException when password does not match', async () => {
       mockUserRepository.findOneOrFail.mockResolvedValueOnce(mockUser);
       jest.mocked(compareWithBcrypt).mockResolvedValueOnce(false);
 
@@ -93,7 +93,7 @@ describe('Auth query handlers', () => {
       });
     });
 
-    it('returns user when credentials are valid', async () => {
+    it('should return user when credentials are valid', async () => {
       mockUserRepository.findOneOrFail.mockResolvedValueOnce(mockUser);
       jest.mocked(compareWithBcrypt).mockResolvedValueOnce(true);
 
@@ -109,11 +109,13 @@ describe('Auth query handlers', () => {
   });
 
   describe('ValidateJwtUserHandler', () => {
-    it('loads user by sub, email, and role', async () => {
+    it('should load user by sub, email, and role', async () => {
       const payload = {
         sub: userId,
         email: 'user@example.com',
         role: Role.USER,
+        tenantId: 'public',
+        scope: 'tenant' as const,
       };
       mockUserRepository.findOneOrFail.mockResolvedValueOnce(mockUser);
 
@@ -131,7 +133,7 @@ describe('Auth query handlers', () => {
   });
 
   describe('GetMyInfoHandler', () => {
-    it('returns user dto for id', async () => {
+    it('should return user dto for id', async () => {
       mockUserRepository.findOneOrFail.mockResolvedValueOnce(mockUser);
 
       const result = await getMyInfoHandler.execute(new GetMyInfoQuery(userId));
@@ -145,7 +147,7 @@ describe('Auth query handlers', () => {
   });
 
   describe('FindUserByEmailHandler', () => {
-    it('delegates to repository findOneOrFail', async () => {
+    it('should delegate to repository findOneOrFail', async () => {
       mockUserRepository.findOneOrFail.mockResolvedValueOnce(mockUser);
 
       const result = await findUserByEmailHandler.execute(
@@ -160,7 +162,7 @@ describe('Auth query handlers', () => {
   });
 
   describe('FindAllUsersPaginatedHandler', () => {
-    it('returns users paginated', async () => {
+    it('should return users paginated', async () => {
       mockUserRepository.findAndCount.mockResolvedValueOnce([[mockUser], 1]);
 
       const query = { page: 1, pageSize: 10, search: '' };
@@ -179,7 +181,7 @@ describe('Auth query handlers', () => {
       );
     });
 
-    it('returns users paginated with search', async () => {
+    it('should return users paginated with search', async () => {
       mockUserRepository.findAndCount.mockResolvedValueOnce([[mockUser], 1]);
 
       const query = { page: 1, pageSize: 10, search: 'test' };
