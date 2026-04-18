@@ -1,13 +1,13 @@
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
-import { PublicAdmin } from './entity/public-admin.entity';
+import { Admin } from './entity/admin.entity';
 import { User } from './entity/user.entity';
 import { AdminLoginHandler } from './command/admin-login.command';
 import { LocalStrategy } from './strategies/local.strategy';
 import { LocalAdminStrategy } from './strategies/local-admin.strategy';
-import { ValidatePublicAdminHandler } from './query/validate-public-admin.query';
-import { ValidatePublicAdminJwtHandler } from './query/validate-public-admin-jwt.query';
+import { ValidateAdminHandler } from './query/validate-admin.query';
+import { ValidateAdminJwtHandler } from './query/validate-admin-jwt.query';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -27,8 +27,8 @@ const authHandlers = [
   AdminLoginHandler,
   ValidateUserHandler,
   ValidateJwtUserHandler,
-  ValidatePublicAdminHandler,
-  ValidatePublicAdminJwtHandler,
+  ValidateAdminHandler,
+  ValidateAdminJwtHandler,
   GetMyInfoHandler,
   FindAllUsersPaginatedHandler,
   FindUserByEmailHandler,
@@ -37,7 +37,7 @@ const authHandlers = [
 @Module({
   imports: [
     CqrsModule,
-    MikroOrmModule.forFeature([User, PublicAdmin]),
+    MikroOrmModule.forFeature([User, Admin]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

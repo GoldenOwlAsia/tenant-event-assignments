@@ -1,5 +1,5 @@
 /**
- * PostgreSQL schema for **management** metadata (`tenant` registry, `public_admin`, …).
+ * PostgreSQL schema for **management** metadata (`tenant` registry, `admin` table, …).
  * Defaults to **`public`**. Per-tenant app tables live in other schemas.
  *
  * Override with `PUBLIC_MIGRATION_SCHEMA` or `PUBLIC_SCHEMA` if needed.

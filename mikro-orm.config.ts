@@ -5,7 +5,7 @@ import { getPublicSchema } from '@/common/tenant/public-schema';
 import { mikroOrmConnectionOptions } from './mikro-orm.shared';
 
 /**
- * Public-schema migrations (`src/database/migrations`): `public.tenant` + `public.public_admin`.
+ * Public-schema migrations (`src/database/migrations`): `tenant` + `admin` (in the configured management schema, default PostgreSQL `public`).
  * `schema` defaults to `public`; override with `PUBLIC_MIGRATION_SCHEMA` or `PUBLIC_SCHEMA`.
  */
 export default defineConfig({

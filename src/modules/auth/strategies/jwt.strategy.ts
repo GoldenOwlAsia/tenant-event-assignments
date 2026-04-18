@@ -16,7 +16,7 @@ import {
   TokenScope,
 } from '../dto/token-payload.dto';
 import { User } from '../entity/user.entity';
-import { ValidatePublicAdminJwtQuery } from '../query/validate-public-admin-jwt.query';
+import { ValidateAdminJwtQuery } from '../query/validate-admin-jwt.query';
 import { ValidateJwtUserQuery } from '../query/validate-jwt-user.query';
 
 export interface IJwtStrategy {
@@ -55,7 +55,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (payload.scope === TOKEN_SCOPE.management) {
       const admin = await this.queryBus.execute(
-        new ValidatePublicAdminJwtQuery(payload),
+        new ValidateAdminJwtQuery(payload),
       );
       return {
         id: admin.id,

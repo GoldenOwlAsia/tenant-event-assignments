@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { QueryBus } from '@nestjs/cqrs';
 import { Strategy } from 'passport-local';
 
-import { ValidatePublicAdminQuery } from '../query/validate-public-admin.query';
+import { ValidateAdminQuery } from '../query/validate-admin.query';
 import { IAdminLocalStrategy } from '../command/admin-login.command';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class LocalAdminStrategy extends PassportStrategy(Strategy, 'admin') {
     password: string,
   ): Promise<IAdminLocalStrategy> {
     const admin = await this.queryBus.execute(
-      new ValidatePublicAdminQuery(email, password),
+      new ValidateAdminQuery(email, password),
     );
     return { id: admin.id, email: admin.email };
   }

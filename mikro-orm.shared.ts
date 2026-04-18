@@ -5,12 +5,12 @@ dotenv.config();
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { Event } from '@/modules/event/entities/event.entity';
 import { EventFailureLog } from '@/modules/event/entities/event-failure-log.entity';
-import { PublicAdmin } from '@/modules/auth/entity/public-admin.entity';
+import { Admin } from '@/modules/auth/entity/admin.entity';
 import { User } from '@/modules/auth/entity/user.entity';
 import { Task } from '@/modules/task/entity/task.entity';
 import { Tenant } from '@/modules/tenant/entity/tenant.entity';
 
-export const mikroOrmPublicSchemaEntities = [Tenant, PublicAdmin];
+export const mikroOrmPublicSchemaEntities = [Tenant, Admin];
 
 export const mikroOrmTenantEntities = [
   Event,

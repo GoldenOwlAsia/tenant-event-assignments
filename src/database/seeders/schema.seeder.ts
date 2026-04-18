@@ -1,7 +1,7 @@
 import { EntityManager } from '@mikro-orm/postgresql';
 import { Seeder } from '@mikro-orm/seeder';
 
-import { PublicAdmin } from '@/modules/auth/entity/public-admin.entity';
+import { Admin } from '@/modules/auth/entity/admin.entity';
 
 const DEFAULT_ADMIN_EMAIL = 'admin@assignment.local';
 
@@ -12,13 +12,13 @@ export class SchemaSeeder extends Seeder {
     const name =
       process.env.PUBLIC_ADMIN_NAME?.trim() || 'System Administrator';
 
-    const existing = await em.findOne(PublicAdmin, { email });
+    const existing = await em.findOne(Admin, { email });
     if (existing) {
       return;
     }
 
     em.persist(
-      em.create(PublicAdmin, {
+      em.create(Admin, {
         email,
         name,
         password,

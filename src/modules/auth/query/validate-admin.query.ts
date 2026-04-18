@@ -4,27 +4,27 @@ import { EntityRepository } from '@mikro-orm/postgresql';
 import { UnauthorizedException } from '@nestjs/common';
 
 import { compareWithBcrypt } from '@/common/utils/hash.util';
-import { PublicAdmin } from '../entity/public-admin.entity';
+import { Admin } from '../entity/admin.entity';
 
-export class ValidatePublicAdminQuery {
+export class ValidateAdminQuery {
   constructor(
     public readonly email: string,
     public readonly password: string,
   ) {}
 }
 
-@QueryHandler(ValidatePublicAdminQuery)
-export class ValidatePublicAdminHandler implements IQueryHandler<
-  ValidatePublicAdminQuery,
-  PublicAdmin
+@QueryHandler(ValidateAdminQuery)
+export class ValidateAdminHandler implements IQueryHandler<
+  ValidateAdminQuery,
+  Admin
 > {
   constructor(
-    @InjectRepository(PublicAdmin)
-    private readonly publicAdminRepository: EntityRepository<PublicAdmin>,
+    @InjectRepository(Admin)
+    private readonly adminRepository: EntityRepository<Admin>,
   ) {}
 
-  async execute(query: ValidatePublicAdminQuery): Promise<PublicAdmin> {
-    const admin = await this.publicAdminRepository.findOne({
+  async execute(query: ValidateAdminQuery): Promise<Admin> {
+    const admin = await this.adminRepository.findOne({
       email: query.email,
     });
     if (!admin) {

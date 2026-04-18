@@ -7,8 +7,8 @@ import { generateWithBcrypt } from '@/common/utils/hash.util';
 import { AUTH_SALT_ROUNDS } from '@/modules/auth/auth.constant';
 
 /** Management (`public` schema) administrator — not a tenant user. */
-@Entity({ schema: getPublicSchema(), tableName: 'public_admin' })
-export class PublicAdmin extends Base {
+@Entity({ schema: getPublicSchema(), tableName: 'admin' })
+export class Admin extends Base {
   @Property({ type: 'string', unique: true })
   email!: string;
 

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@mikro-orm/nestjs';
 import { UnauthorizedException } from '@nestjs/common';
+import { MikroORM } from '@mikro-orm/core';
 
 import { User } from '../entity/user.entity';
 import { Role } from '@/modules/auth/enum/role.enum';
@@ -46,6 +47,15 @@ describe('Auth query handlers', () => {
     findAndCount: jest.fn(),
   };
 
+  const mockForkEm = {
+    findOneOrFail: jest.fn(),
+  };
+  const mockOrm = {
+    em: {
+      fork: jest.fn().mockReturnValue(mockForkEm),
+    },
+  };
+
   let validateUserHandler: ValidateUserHandler;
   let validateJwtUserHandler: ValidateJwtUserHandler;
   let getMyInfoHandler: GetMyInfoHandler;
@@ -65,6 +75,10 @@ describe('Auth query handlers', () => {
         {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
+        },
+        {
+          provide: MikroORM,
+          useValue: mockOrm,
         },
       ],
     }).compile();
@@ -109,21 +123,22 @@ describe('Auth query handlers', () => {
   });
 
   describe('ValidateJwtUserHandler', () => {
-    it('should load user by sub, email, and role', async () => {
+    it('should load user by sub, email, and role in the JWT tenant schema', async () => {
       const payload = {
         sub: userId,
         email: 'user@example.com',
         role: Role.USER,
-        tenantId: 'public',
+        tenantId: 'mytenant',
         scope: 'tenant' as const,
       };
-      mockUserRepository.findOneOrFail.mockResolvedValueOnce(mockUser);
+      mockForkEm.findOneOrFail.mockResolvedValueOnce(mockUser);
 
       const result = await validateJwtUserHandler.execute(
         new ValidateJwtUserQuery(payload),
       );
 
-      expect(mockUserRepository.findOneOrFail).toHaveBeenCalledWith({
+      expect(mockOrm.em.fork).toHaveBeenCalledWith({ schema: 'mytenant' });
+      expect(mockForkEm.findOneOrFail).toHaveBeenCalledWith(User, {
         id: payload.sub,
         email: payload.email,
         role: payload.role,

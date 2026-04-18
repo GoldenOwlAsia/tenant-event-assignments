@@ -103,7 +103,7 @@
           "mappedType": "string"
         }
       },
-      "name": "public_admin",
+      "name": "admin",
       "schema": "public",
       "indexes": [
         {
@@ -112,7 +112,7 @@
           ],
           "composite": false,
           "constraint": false,
-          "keyName": "public_admin_email_unique",
+          "keyName": "admin_email_unique",
           "unique": true,
           "primary": false
         },
@@ -122,7 +122,7 @@
           ],
           "composite": false,
           "constraint": false,
-          "keyName": "public_admin_pkey",
+          "keyName": "admin_pkey",
           "unique": true,
           "primary": true
         }

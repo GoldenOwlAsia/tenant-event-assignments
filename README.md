@@ -50,7 +50,35 @@ Defaults: API on host **3005** (`API_PUBLISH_PORT`), Postgres **5433**. If you c
 
 [**Swagger UI**](http://localhost:3005/api/docs/#)
 
-**Multi-tenant (schema isolation):** the PostgreSQL **`public`** schema holds only the **tenant registry** and **management** (`public_admin`) authentication. Per-tenant app data (`user`, `task`, `event`, …) lives in **dedicated tenant schemas**. The API resolves a tenant schema from the `X-Tenant-Id` header on tenant routes; **management routes** (`/api/auth/admin/login`, `/api/tenant`) omit that header and run against `public`. Background workers read `tenantId` from each BullMQ job so processing stays on the correct schema.
+**Multi-tenant (schema isolation):** the PostgreSQL **`public`** schema holds only the **tenant registry** and **management** authentication (`admin` table). Per-tenant app data (`user`, `task`, `event`, …) lives in **dedicated tenant schemas**. The API resolves a tenant schema from the `X-Tenant-Id` header on tenant routes; **management routes** (`/api/auth/admin/login`, `/api/tenant`) omit that header and run against `public`. Background workers read `tenantId` from each BullMQ job so processing stays on the correct schema.
+
+```mermaid
+%%{init: {'flowchart': {'curve': 'basis', 'padding': 20}, 'themeVariables': {'fontFamily': 'ui-sans-serif, system-ui, sans-serif', 'primaryTextColor': '#0f172a', 'clusterTextColor': '#0f172a', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#64748b', 'lineColor': '#475569'}}}%%
+flowchart TB
+  classDef pg fill:#134e4a,stroke:#020617,stroke-width:2px,color:#ecfdf5
+  classDef pub fill:#ffffff,stroke:#0f766e,stroke-width:2px,color:#022c22
+  classDef tnt fill:#ffffff,stroke:#5b21b6,stroke-width:2px,color:#1e1b4b
+
+  DB[(PostgreSQL<br/>one database · many schemas)]:::pg
+
+  subgraph layout[Postgres schema]
+    direction LR
+    subgraph public[Schema public · platform]
+      direction TB
+      REG[tenant registry]:::pub
+      ADM[admin]:::pub
+    end
+    subgraph tenants[Tenant schemas · app data]
+      APP(["user · task · event"]):::tnt
+    end
+  end
+
+  DB --> layout
+
+  style public fill:#d1fae5,stroke:#059669,stroke-width:1px,color:#022c22
+  style tenants fill:#e9d5ff,stroke:#7c3aed,stroke-width:1px,color:#1e1b4b
+  style layout fill:#e2e8f0,stroke:#64748b,stroke-width:1px,color:#0f172a
+```
 
 ### 2. Start everything
 
@@ -66,7 +94,7 @@ Access [Swagger API Doc](http://localhost:3005/api/docs#/)
 
 ### 3. Migrations (first time or empty DB)
 
-**Public-schema migrations** (`src/database/migrations`) — a **single** migration (`Migration20260418000000_InitialPublicSchema`) creates `tenant` and `public_admin` in the PostgreSQL **`public`** schema (override with `PUBLIC_MIGRATION_SCHEMA` or `PUBLIC_SCHEMA` if needed). Run with `pnpm migration:up`.
+**Public-schema migrations** (`src/database/migrations`) — a **single** migration (`Migration20260418000000_InitialPublicSchema`) creates `tenant` and `admin` in the PostgreSQL **`public`** schema (override with `PUBLIC_MIGRATION_SCHEMA` or `PUBLIC_SCHEMA` if needed). Run with `pnpm migration:up`.
 
 **Per-tenant migrations** (`src/database/migrations-tenant`) create app tables (`event`, `user`, `task`, …) inside each tenant schema when you create or migrate tenants (`create-tenant`, `pnpm migrate:tenants`, etc.) via `getTenantMikroOrmConfig` in `mikro-orm.tenant.config.ts`.
 
@@ -78,7 +106,7 @@ If you previously applied older public-schema migrations, **reset the DB** or re
 
 ### 4. Seeding
 
-**Management seeder:** `SchemaSeeder` seeds a **`public_admin`** row (default email `admin@assignment.local`; tune with `PUBLIC_ADMIN_*` in `.env`). Use the CLI when you only need that row:
+**Management seeder:** `SchemaSeeder` seeds an **`admin`** row (default email `admin@assignment.local`; tune with `PUBLIC_ADMIN_*` in `.env`). Use the CLI when you only need that row:
 
 ```bash
 pnpm exec mikro-orm seeder:run --class=SchemaSeeder
@@ -286,7 +314,7 @@ pnpm test
 - `src/processors/processors.module.ts` — registers BullMQ **task** and **mail** processors and their queues for the worker process
 - `src/common/` (besides `tenant/`) — enums, constants, base entity, pagination, decorators, shared helpers
 - `src/config/` — JWT and mail configuration
-- `src/database/` — `tenant.provider.ts` (request-scoped forked `EntityManager` per tenant schema), **public** migrations (`migrations/`), **per-tenant** migrations (`migrations-tenant/`), `seeders/schema.seeder.ts` (`public_admin`; `pnpm exec mikro-orm seeder:run`), `seeders/database.seeder.ts` (tenant demo data; used by `pnpm seed:database` / `seed:tenant`)
+- `src/database/` — `tenant.provider.ts` (request-scoped forked `EntityManager` per tenant schema), **public** migrations (`migrations/`), **per-tenant** migrations (`migrations-tenant/`), `seeders/schema.seeder.ts` (`admin` table; `pnpm exec mikro-orm seeder:run`), `seeders/database.seeder.ts` (tenant demo data; used by `pnpm seed:database` / `seed:tenant`)
 - `script/migrate-tenants.ts`, `script/seed-tenants.ts` — CLI to migrate or seed per-tenant schemas (`pnpm migrate:tenants`, `pnpm seed:tenant`)
 - `mikro-orm.config.ts`, `mikro-orm.shared.ts`, `mikro-orm.tenant.config.ts` — ORM / DB connection; tenant migrator uses `migrations-tenant`
 - `docker-compose.yml` — Postgres, Redis, MailHog, API, worker (task + mail processors)
